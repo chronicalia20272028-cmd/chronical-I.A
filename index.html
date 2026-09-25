@@ -39,13 +39,13 @@
 
     <div class="chat-container">
         <header class="chat-top-bar">
-            <div class="logo-title">Chronical I.A (Powered by Gemini)</div>
+            <div class="logo-title">Chronical I.A (Direct Gemini)</div>
         </header>
 
         <div class="chat-box" id="chatBox">
             <div class="message assistant-message">
                 <div class="message-header">Chronical I.A</div>
-                Olá! Sou a Chronical I.A integrada com o motor do Gemini. O que gostaria de perguntar hoje?
+                Olá! Estou ligada diretamente ao motor do Gemini. Escreve uma mensagem!
             </div>
         </div>
 
@@ -63,6 +63,9 @@
         const sendBtn = document.getElementById('sendBtn');
         const userInput = document.getElementById('userInput');
         const chatBox = document.getElementById('chatBox');
+
+        // Chave inserida diretamente para teste imediato
+        const GEMINI_API_KEY = "AQ.Ab8RN6IJ-a0ScVNkl86Cyr8wjJVxU3Nk0a6u3eOquNn6aAL6Gw";
 
         function falarTexto(texto) {
             if ('speechSynthesis' in window) {
@@ -91,22 +94,27 @@
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
-                const response = await fetch('/api/chat', {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text })
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: text }] }]
+                    })
                 });
 
                 const data = await response.json();
-                const resposta = data.reply || data.error || "Ocorreu um erro ao responder.";
-
-                assistantMsg.innerHTML = `<div class="message-header">Chronical I.A</div>${resposta}`;
-                chatBox.scrollTop = chatBox.scrollHeight;
-                falarTexto(resposta);
+                
+                if (data.error) {
+                    assistantMsg.innerHTML = `<div class="message-header">Chronical I.A</div>Erro da API: ${data.error.message}`;
+                } else {
+                    const resposta = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta gerada.";
+                    assistantMsg.innerHTML = `<div class="message-header">Chronical I.A</div>${resposta}`;
+                    falarTexto(resposta);
+                }
             } catch (err) {
-                assistantMsg.innerHTML = `<div class="message-header">Chronical I.A</div>Erro de ligação ao servidor.`;
-                chatBox.scrollTop = chatBox.scrollHeight;
+                assistantMsg.innerHTML = `<div class="message-header">Chronical I.A</div>Erro de rede ao contactar o Gemini.`;
             }
+            chatBox.scrollTop = chatBox.scrollHeight;
         }
 
         sendBtn.addEventListener('click', handleSendMessage);
